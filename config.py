@@ -7,10 +7,21 @@ load_dotenv()
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
+def _fix_db_url(url):
+    """Railway provides postgres:// but SQLAlchemy 2.x requires postgresql://"""
+    if url and url.startswith('postgres://'):
+        return 'postgresql://' + url[len('postgres://'):]
+    return url
+
+
+_raw_db_url = os.environ.get('DATABASE_URL')
+_db_url = _fix_db_url(_raw_db_url) if _raw_db_url else None
+_sqlite_url = 'sqlite:///' + os.path.join(BASE_DIR, 'data', 'tasktracker.db')
+
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(BASE_DIR, 'data', 'tasktracker.db')
+    SQLALCHEMY_DATABASE_URI = _db_url or _sqlite_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = 3600
@@ -32,8 +43,6 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(BASE_DIR, 'data', 'tasktracker.db')
 
 
 config = {

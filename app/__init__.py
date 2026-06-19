@@ -24,8 +24,9 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
 
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
-    os.makedirs(data_dir, exist_ok=True)
+    if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('sqlite'):
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+        os.makedirs(data_dir, exist_ok=True)
 
     db.init_app(app)
     login_manager.init_app(app)

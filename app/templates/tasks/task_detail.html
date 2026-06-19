@@ -14,19 +14,19 @@
   </nav>
 
   <div class="card card-shadow p-6 {% if is_overdue %}border-l-4 border-l-red-400{% endif %}">
-    <div class="flex items-start justify-between gap-4 flex-wrap">
-      <h1 class="text-xl font-bold flex-1 {% if task.status=='done' %}line-through text-gray-400{% endif %}">{{ task.title }}</h1>
+    <div class="flex items-start gap-3 flex-wrap">
+      <h1 class="text-xl font-bold flex-1 min-w-0 {% if task.status=='done' %}line-through text-gray-400{% endif %}">{{ task.title }}</h1>
       <div class="flex items-center gap-2 flex-shrink-0">
         {% if can_edit %}
         <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="btn btn-secondary btn-sm">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-          Изменить
+          <span class="hidden sm:inline">Изменить</span>
         </a>
         {% endif %}
         {% if task.user_id == current_user.id or current_user.is_admin() %}
         <button onclick="document.getElementById('delModal').classList.remove('hidden')" class="btn btn-danger btn-sm">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          Удалить
+          <span class="hidden sm:inline">Удалить</span>
         </button>
         {% endif %}
       </div>
@@ -58,17 +58,19 @@
     </div>
 
     {% if can_edit %}
-    <form method="POST" action="{{ url_for('tasks.update_status', task_id=task.id) }}" class="flex flex-wrap items-center gap-2 mt-4">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <span class="text-xs text-gray-400 font-medium">Статус:</span>
-      {% for v,l in [('todo','К выполнению'),('in_progress','В работе'),('review','На проверке'),('done','Выполнено'),('cancelled','Отменено')] %}
-        <button type="submit" name="status" value="{{ v }}"
-                class="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all
-                  {% if task.status==v %}bg-brand-600 text-white border-brand-600{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400 hover:text-brand-600{% endif %}">
-          {{ l }}
-        </button>
-      {% endfor %}
-    </form>
+    <div class="overflow-x-auto -mx-6 px-6 mt-4">
+      <form method="POST" action="{{ url_for('tasks.update_status', task_id=task.id) }}" class="flex items-center gap-2" style="min-width:max-content">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <span class="text-xs text-gray-400 font-medium">Статус:</span>
+        {% for v,l in [('todo','К выполнению'),('in_progress','В работе'),('review','На проверке'),('done','Выполнено'),('cancelled','Отменено')] %}
+          <button type="submit" name="status" value="{{ v }}"
+                  class="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all whitespace-nowrap
+                    {% if task.status==v %}bg-brand-600 text-white border-brand-600{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400 hover:text-brand-600{% endif %}">
+            {{ l }}
+          </button>
+        {% endfor %}
+      </form>
+    </div>
     {% endif %}
 
     {% if task.description %}
