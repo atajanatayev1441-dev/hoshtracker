@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — TaskTracker{% endblock %}
+{% block content %}
+<div class="max-w-2xl space-y-5">
+  <nav class="text-sm text-gray-400">
+    <a href="{{ url_for('tasks.task_list') }}" class="hover:text-brand-600">Задачи</a>
+    <span class="mx-1.5">/</span>
+    {% if task %}<a href="{{ url_for('tasks.task_detail', task_id=task.id) }}" class="hover:text-brand-600">{{ task.title[:40] }}</a><span class="mx-1.5">/</span>{% endif %}
+    <span class="text-gray-600 dark:text-gray-300">{{ title }}</span>
+  </nav>
+
+  <h1 class="section-title">{{ title }}</h1>
+
+  <form method="POST" action="{{ url_for('tasks.edit_task', task_id=task.id) if task else url_for('tasks.new_task') }}" novalidate>
+    {{ form.hidden_tag() }}
+
+    <div class="card card-shadow p-6 space-y-5">
+      <div>
+        <label class="form-label">Название <span class="text-red-500">*</span></label>
+        {{ form.title(class='form-input', placeholder='Что нужно сделать?', autofocus=True) }}
+        {% for e in form.title.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+      </div>
+
+      <div>
+        <label class="form-label">Описание</label>
+        {{ form.description(class='form-input resize-none', rows=3, placeholder='Подробности, заметки, ссылки...') }}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Проект</label>
+          {{ form.project_id(class='form-input') }}
+        </div>
+        <div>
+          <label class="form-label">Исполнитель</label>
+          {{ form.assigned_to_id(class='form-input') }}
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Срок выполнения</label>
+          {{ form.deadline(class='form-input', id='deadlineInput') }}
+        </div>
+        <div>
+          <label class="form-label">Оценка времени (мин)</label>
+          {{ form.time_estimate(class='form-input', placeholder='напр. 60') }}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Приоритет</label>
+          <div class="flex gap-2 flex-wrap mt-1" id="prioGroup">
+            {% for v,l,cls in [('low','Низкий','border-gray-300 text-gray-600'),('medium','Средний','border-blue-300 text-blue-600'),('high','Высокий','border-amber-300 text-amber-600'),('critical','Критический','border-red-300 text-red-600')] %}
+              <button type="button" id="pb-{{ v }}" onclick="setPrio('{{ v }}')"
+                      class="prio-btn px-3 py-1.5 rounded-lg border text-xs font-medium transition-all {{ cls }}">{{ l }}</button>
+            {% endfor %}
+          </div>
+          {{ form.priority(class='hidden', id='prioInput') }}
+        </div>
+        <div>
+          <label class="form-label">Статус</label>
+          {{ form.status(class='form-input') }}
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Метки</label>
+        <div class="flex flex-wrap gap-2 mb-2" id="tagBtns">
+          {% for tag in user_tags %}
+            <button type="button" onclick="toggleTag({{ tag.id }}, this)" data-id="{{ tag.id }}"
+                    class="tag-btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-all border-gray-200 dark:border-gray-700 hover:border-brand-400 opacity-50">
+              <span class="w-2 h-2 rounded-full" style="background:{{ tag.color }}"></span>{{ tag.name }}
+            </button>
+          {% endfor %}
+        </div>
+        <div class="flex gap-2 mt-2">
+          <input type="text" id="newTagName" placeholder="Новая метка..." class="form-input flex-1 py-1.5 text-xs">
+          <input type="color" id="newTagColor" value="#6366f1" class="h-8 w-10 rounded border border-gray-300 cursor-pointer flex-shrink-0">
+          <button type="button" onclick="createTag()" class="btn btn-secondary btn-sm flex-shrink-0">Добавить</button>
+        </div>
+        {{ form.tag_ids(id='tagIdsInput') }}
+      </div>
+    </div>
+
+    <!-- Subtasks -->
+    <div class="card card-shadow p-5 mt-4">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold">Подзадачи</h2>
+        <button type="button" onclick="addSubtask()" class="btn btn-secondary btn-sm">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Добавить
+        </button>
+      </div>
+      <ul id="stList" class="space-y-2"></ul>
+      <p id="stEmpty" class="text-sm text-gray-400 text-center py-3">Нет подзадач. Разбейте задачу на шаги.</p>
+      {{ form.subtasks_json(id='stJson') }}
+    </div>
+
+    <div class="flex gap-3 mt-4">
+      <button type="submit" class="btn btn-primary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        {{ 'Сохранить изменения' if task else 'Создать задачу' }}
+      </button>
+      <a href="{{ url_for('tasks.task_detail', task_id=task.id) if task else url_for('tasks.task_list') }}" class="btn btn-secondary">Отмена</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const selectedTags = new Set('{{ form.tag_ids.data or "" }}'.split(',').filter(Boolean).map(Number));
+function updateTagInput() { document.getElementById('tagIdsInput').value = [...selectedTags].join(','); }
+function toggleTag(id, btn) {
+  selectedTags.has(id) ? selectedTags.delete(id) : selectedTags.add(id);
+  btn.classList.toggle('opacity-50', !selectedTags.has(id));
+  btn.classList.toggle('ring-2', selectedTags.has(id));
+  btn.classList.toggle('ring-brand-500', selectedTags.has(id));
+  updateTagInput();
+}
+// Re-apply existing selections on load
+document.querySelectorAll('.tag-btn').forEach(btn => {
+  if (selectedTags.has(+btn.dataset.id)) {
+    btn.classList.remove('opacity-50'); btn.classList.add('ring-2','ring-brand-500');
+  }
+});
+
+async function createTag() {
+  const name = document.getElementById('newTagName').value.trim();
+  const color = document.getElementById('newTagColor').value;
+  if (!name) return;
+  const fd = new FormData();
+  fd.append('name', name); fd.append('color', color); fd.append('csrf_token', getCsrf());
+  const res = await fetch('{{ url_for("tasks.new_tag") }}', { method:'POST', headers:{Accept:'application/json'}, body:fd });
+  const data = await res.json();
+  const tag = data.tag;
+  if (!tag) return;
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.dataset.id = tag.id;
+  btn.className = 'tag-btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-all border-gray-200 dark:border-gray-700 hover:border-brand-400 opacity-50';
+  btn.innerHTML = `<span class="w-2 h-2 rounded-full" style="background:${tag.color}"></span>${tag.name}`;
+  btn.onclick = function() { toggleTag(tag.id, this); };
+  document.getElementById('tagBtns').appendChild(btn);
+  document.getElementById('newTagName').value = '';
+  toggleTag(tag.id, btn);
+}
+
+// Priority
+function setPrio(v) {
+  document.getElementById('prioInput').value = v;
+  document.querySelectorAll('.prio-btn').forEach(b => {
+    const active = b.id === 'pb-' + v;
+    b.classList.toggle('ring-2', active);
+    b.classList.toggle('ring-offset-1', active);
+    b.classList.toggle('ring-brand-500', active);
+    b.style.opacity = active ? '1' : '0.5';
+  });
+}
+setPrio(document.getElementById('prioInput').value || 'medium');
+
+// Subtasks
+let subtasks = [];
+try { subtasks = JSON.parse(document.getElementById('stJson').value || '[]'); } catch(e) { subtasks = []; }
+
+function renderSubtasks() {
+  const list = document.getElementById('stList');
+  document.getElementById('stEmpty').style.display = subtasks.length ? 'none' : 'block';
+  list.innerHTML = '';
+  subtasks.forEach((st, i) => {
+    const li = document.createElement('li');
+    li.className = 'flex items-center gap-2'; li.draggable = true; li.dataset.i = i;
+    li.innerHTML = `
+      <span class="text-gray-300 dark:text-gray-600 cursor-grab select-none text-lg leading-none">&#8942;&#8942;</span>
+      <input type="checkbox" ${st.is_done?'checked':''} onchange="subtasks[${i}].is_done=this.checked;syncST()" class="h-4 w-4 rounded">
+      <input type="text" value="${esc(st.title)}" oninput="subtasks[${i}].title=this.value;syncST()" placeholder="Подзадача..."
+             class="form-input flex-1 py-1.5 text-sm ${st.is_done?'line-through text-gray-400':''}">
+      <button type="button" onclick="subtasks.splice(${i},1);renderSubtasks();syncST()" class="p-1 text-gray-400 hover:text-red-500">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>`;
+    list.appendChild(li);
+  });
+  setupDragST();
+}
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function addSubtask() { subtasks.push({title:'',is_done:false}); renderSubtasks(); list.querySelector('li:last-child input[type=text]')?.focus(); }
+function syncST() { document.getElementById('stJson').value = JSON.stringify(subtasks); }
+function setupDragST() {
+  let drag = null;
+  document.querySelectorAll('#stList li').forEach(li => {
+    li.addEventListener('dragstart', () => drag = +li.dataset.i);
+    li.addEventListener('dragover', e => e.preventDefault());
+    li.addEventListener('drop', () => {
+      if (drag !== null && drag !== +li.dataset.i) {
+        const [m] = subtasks.splice(drag, 1); subtasks.splice(+li.dataset.i, 0, m);
+        renderSubtasks(); syncST();
+      }
+    });
+  });
+}
+renderSubtasks(); syncST();
+const list = document.getElementById('stList');
+</script>
+{% endblock %}

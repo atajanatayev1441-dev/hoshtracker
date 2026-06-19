@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Аналитика — TaskTracker{% endblock %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="max-w-5xl space-y-6">
+  <h1 class="section-title">Аналитика</h1>
+
+  <!-- Stats cards — populated via JS -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3" id="statsCards">
+    {% for id, label, cls in [('stat-total','Всего задач',''),('stat-week','Выполнено за неделю','text-green-600'),('stat-overdue','Просрочено','text-red-500'),('stat-rate','Выполнено %','text-brand-600')] %}
+    <div class="card card-shadow p-4">
+      <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">{{ label }}</p>
+      <p class="text-3xl font-bold mt-1 {{ cls }}" id="{{ id }}">—</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Bar + Doughnut row -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="card card-shadow p-5 lg:col-span-2">
+      <h2 class="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-4">Выполнено задач (последние 30 дней)</h2>
+      <div class="relative h-48">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+    <div class="card card-shadow p-5">
+      <h2 class="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-4">По статусам</h2>
+      <div class="relative h-48">
+        <canvas id="doughnutChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Line chart -->
+  <div class="card card-shadow p-5">
+    <h2 class="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-4">Продуктивность (последние 12 недель)</h2>
+    <div class="relative h-48">
+      <canvas id="lineChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Heatmap -->
+  <div class="card card-shadow p-5">
+    <h2 class="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-4">Активность за год</h2>
+    <div class="overflow-x-auto">
+      <div id="heatmap" class="flex gap-1" style="min-width:700px;"></div>
+    </div>
+    <div class="flex items-center gap-2 mt-3 text-xs text-gray-400">
+      <span>Меньше</span>
+      <div class="flex gap-0.5">
+        <div class="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-800"></div>
+        <div class="w-3 h-3 rounded-sm bg-green-200 dark:bg-green-900"></div>
+        <div class="w-3 h-3 rounded-sm bg-green-400 dark:bg-green-700"></div>
+        <div class="w-3 h-3 rounded-sm bg-green-600 dark:bg-green-500"></div>
+        <div class="w-3 h-3 rounded-sm bg-green-800 dark:bg-green-300"></div>
+      </div>
+      <span>Больше</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const isDark = () => document.documentElement.classList.contains('dark');
+const gridColor = () => isDark() ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+const tickColor = () => isDark() ? '#9ca3af' : '#6b7280';
+
+const baseOpts = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+};
+
+// ── Load stats ───────────────────────────────────────────────────────────────
+fetch('/analytics/api/stats')
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById('stat-total').textContent = d.total;
+    document.getElementById('stat-week').textContent = d.done_week;
+    document.getElementById('stat-overdue').textContent = d.overdue;
+    document.getElementById('stat-rate').textContent = d.completion_rate + '%';
+  });
+
+// ── Bar chart ────────────────────────────────────────────────────────────────
+fetch('/analytics/api/productivity')
+  .then(r => r.json())
+  .then(d => {
+    new Chart(document.getElementById('barChart'), {
+      type: 'bar',
+      data: {
+        labels: d.labels,
+        datasets: [{
+          data: d.data,
+          backgroundColor: '#6366f1cc',
+          borderRadius: 4,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        ...baseOpts,
+        scales: {
+          x: {
+            ticks: { color: tickColor(), maxRotation: 0, maxTicksLimit: 10, font: { size: 10 } },
+            grid: { display: false },
+          },
+          y: {
+            ticks: { color: tickColor(), stepSize: 1, font: { size: 10 } },
+            grid: { color: gridColor() },
+            beginAtZero: true,
+          }
+        }
+      }
+    });
+  });
+
+// ── Doughnut chart ────────────────────────────────────────────────────────────
+fetch('/analytics/api/by-status')
+  .then(r => r.json())
+  .then(d => {
+    const labels = {'todo':'К выполнению','in_progress':'В работе','review':'На проверке','done':'Выполнено','cancelled':'Отменено'};
+    const colors = ['#d1d5db','#3b82f6','#a855f7','#22c55e','#ef4444'];
+    new Chart(document.getElementById('doughnutChart'), {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(d).map(k => labels[k] || k),
+        datasets: [{ data: Object.values(d), backgroundColor: colors, borderWidth: 0 }]
+      },
+      options: {
+        ...baseOpts,
+        cutout: '65%',
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+            labels: { color: tickColor(), font: { size: 10 }, boxWidth: 10, padding: 8 }
+          }
+        }
+      }
+    });
+  });
+
+// ── Line chart ────────────────────────────────────────────────────────────────
+fetch('/analytics/api/weekly')
+  .then(r => r.json())
+  .then(d => {
+    new Chart(document.getElementById('lineChart'), {
+      type: 'line',
+      data: {
+        labels: d.labels,
+        datasets: [{
+          data: d.data,
+          borderColor: '#6366f1',
+          backgroundColor: '#6366f115',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointBackgroundColor: '#6366f1',
+        }]
+      },
+      options: {
+        ...baseOpts,
+        scales: {
+          x: { ticks: { color: tickColor(), font: { size: 10 } }, grid: { display: false } },
+          y: { ticks: { color: tickColor(), stepSize: 1, font: { size: 10 } }, grid: { color: gridColor() }, beginAtZero: true }
+        }
+      }
+    });
+  });
+
+// ── Heatmap ───────────────────────────────────────────────────────────────────
+fetch('/analytics/api/heatmap')
+  .then(r => r.json())
+  .then(({ cells, max }) => {
+    const container = document.getElementById('heatmap');
+    const weeks = [];
+    let week = [];
+    // Pad to start of week (Monday = 0)
+    const startDow = new Date(cells[0].date).getDay();
+    const pad = startDow === 0 ? 6 : startDow - 1;
+    for (let i = 0; i < pad; i++) week.push(null);
+    cells.forEach(c => {
+      week.push(c);
+      if (week.length === 7) { weeks.push(week); week = []; }
+    });
+    if (week.length) {
+      while (week.length < 7) week.push(null);
+      weeks.push(week);
+    }
+
+    const intensity = count => {
+      if (!count) return isDark() ? '#1f2937' : '#f3f4f6';
+      const pct = count / max;
+      if (pct < 0.25) return isDark() ? '#14532d' : '#bbf7d0';
+      if (pct < 0.5)  return isDark() ? '#166534' : '#4ade80';
+      if (pct < 0.75) return isDark() ? '#15803d' : '#16a34a';
+      return isDark() ? '#86efac' : '#166534';
+    };
+
+    weeks.forEach(wk => {
+      const col = document.createElement('div');
+      col.className = 'flex flex-col gap-1';
+      wk.forEach(cell => {
+        const sq = document.createElement('div');
+        sq.style.cssText = 'width:12px;height:12px;border-radius:2px;';
+        sq.style.background = cell ? intensity(cell.count) : 'transparent';
+        if (cell) sq.title = `${cell.date}: ${cell.count} задач`;
+        col.appendChild(sq);
+      });
+      container.appendChild(col);
+    });
+  });
+</script>
+{% endblock %}

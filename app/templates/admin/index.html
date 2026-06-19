@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Администрирование — TaskTracker{% endblock %}
+{% block content %}
+<div class="max-w-4xl space-y-6">
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <h1 class="section-title">Администрирование</h1>
+    <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary btn-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+      Новый пользователь
+    </a>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    {% for label, value, cls in [
+      ('Всего пользователей', total_users, ''),
+      ('Активных', active_users, 'text-green-600 dark:text-green-400'),
+      ('Всего задач', total_tasks, ''),
+      ('Выполнено', tasks_by_status.done, 'text-green-600 dark:text-green-400'),
+    ] %}
+    <div class="card card-shadow p-4">
+      <p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">{{ label }}</p>
+      <p class="text-3xl font-bold mt-1 {{ cls }}">{{ value }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card card-shadow p-5">
+    <h2 class="font-semibold mb-4">Задачи по статусу</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center text-sm">
+      {% for v, l in [('todo','К выполнению'),('in_progress','В работе'),('review','На проверке'),('done','Выполнено'),('cancelled','Отменено')] %}
+      <div class="card p-3 border border-gray-100 dark:border-gray-800">
+        <p class="text-2xl font-bold">{{ tasks_by_status.get(v, 0) }}</p>
+        <p class="text-xs text-gray-400 mt-1">{{ l }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Recent activity -->
+  {% if recent_activity %}
+  <div class="card card-shadow p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-semibold">Последние действия</h2>
+      <a href="{{ url_for('admin.activity_log') }}" class="text-sm text-brand-600 dark:text-brand-400 hover:underline">Все &rarr;</a>
+    </div>
+    <div class="space-y-2">
+      {% for log in recent_activity[:8] %}
+      <div class="flex items-center gap-2 text-sm">
+        <span class="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 font-semibold flex-shrink-0" style="font-size:9px;">{{ log.actor.username[0].upper() }}</span>
+        <span class="font-medium text-gray-700 dark:text-gray-300">{{ log.actor.username }}</span>
+        <span class="text-gray-500 dark:text-gray-400 truncate">{{ log.description }}</span>
+        <span class="text-xs text-gray-400 flex-shrink-0 ml-auto">{{ log.created_at.strftime('%H:%M') }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card card-shadow p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-semibold">Последние пользователи</h2>
+      <a href="{{ url_for('admin.user_list') }}" class="text-sm text-brand-600 dark:text-brand-400 hover:underline">Все &rarr;</a>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
+          <th class="pb-2 pr-4">Пользователь</th>
+          <th class="pb-2 pr-4">Роль</th>
+          <th class="pb-2 pr-4">Задач</th>
+          <th class="pb-2">Регистрация</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
+          {% for user in recent_users %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+            <td class="py-2 pr-4">
+              <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="font-medium hover:text-brand-600">{{ user.username }}</a>
+              <p class="text-xs text-gray-400">{{ user.email }}</p>
+            </td>
+            <td class="py-2 pr-4">
+              <span class="badge {% if user.role=='admin' %}bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400{% else %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400{% endif %}">
+                {{ 'Администратор' if user.role=='admin' else 'Пользователь' }}
+              </span>
+            </td>
+            <td class="py-2 pr-4 text-gray-500">{{ user.task_count() }}</td>
+            <td class="py-2 text-xs text-gray-400">{{ user.created_at.strftime('%d.%m.%Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

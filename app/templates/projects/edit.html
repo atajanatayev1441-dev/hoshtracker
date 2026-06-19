@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Настройки проекта — TaskTracker{% endblock %}
+{% block content %}
+<div class="max-w-lg space-y-5">
+  <nav class="text-sm text-gray-400">
+    <a href="{{ url_for('projects.project_list') }}" class="hover:text-brand-600">Проекты</a>
+    <span class="mx-1.5">/</span>
+    <a href="{{ url_for('projects.detail', project_id=project.id) }}" class="hover:text-brand-600">{{ project.name }}</a>
+    <span class="mx-1.5">/</span>
+    <span>Настройки</span>
+  </nav>
+  <h1 class="section-title">Настройки проекта</h1>
+  <div class="card card-shadow p-6">
+    <form method="POST" action="{{ url_for('projects.edit', project_id=project.id) }}" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="space-y-4">
+        <div>
+          <label class="form-label">Название</label>
+          {{ form.name(class='form-input') }}
+          {% for e in form.name.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Описание</label>
+          {{ form.description(class='form-input resize-none', rows=3) }}
+        </div>
+        <div>
+          <label class="form-label">Цвет</label>
+          {{ form.color(class='h-9 w-12 rounded-lg border border-gray-300 cursor-pointer', type='color') }}
+        </div>
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <a href="{{ url_for('projects.detail', project_id=project.id) }}" class="btn btn-secondary">Отмена</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="card card-shadow p-5 border-red-200 dark:border-red-900">
+    <h3 class="font-semibold text-red-600 dark:text-red-400 mb-3">Опасная зона</h3>
+    <div class="flex gap-3 flex-wrap">
+      <form method="POST" action="{{ url_for('projects.archive', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-secondary btn-sm">
+          {{ 'Восстановить из архива' if project.is_archived else 'Архивировать' }}
+        </button>
+      </form>
+      <button onclick="document.getElementById('delProjModal').classList.remove('hidden')" class="btn btn-danger btn-sm">Удалить проект</button>
+    </div>
+  </div>
+</div>
+
+<div id="delProjModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="document.getElementById('delProjModal').classList.add('hidden')"></div>
+  <div class="card card-shadow p-6 max-w-sm w-full relative z-10">
+    <h3 class="font-semibold text-lg mb-2">Удалить проект?</h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Проект «<strong>{{ project.name }}</strong>» будет удалён. Задачи останутся, но будут откреплены от проекта.</p>
+    <div class="flex gap-3 justify-end">
+      <button onclick="document.getElementById('delProjModal').classList.add('hidden')" class="btn btn-secondary">Отмена</button>
+      <form method="POST" action="{{ url_for('projects.delete', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger">Удалить</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

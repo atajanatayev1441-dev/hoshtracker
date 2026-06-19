@@ -1,0 +1,57 @@
+{% set is_overdue = task.deadline and task.status not in ['done','cancelled'] and task.deadline < now %}
+<div class="card card-shadow px-4 py-3 flex items-start gap-3 hover:shadow-md transition-shadow {% if is_overdue %}border-l-4 border-l-red-400{% endif %}">
+  <form method="POST" action="{{ url_for('tasks.update_status', task_id=task.id) }}" class="flex-shrink-0 mt-0.5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="status" value="{{ 'todo' if task.status == 'done' else 'done' }}">
+    <button type="submit" title="{{ 'Вернуть' if task.status == 'done' else 'Выполнено' }}"
+            class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
+                   {% if task.status == 'done' %}border-green-500 bg-green-500 text-white{% else %}border-gray-300 dark:border-gray-600 hover:border-green-400{% endif %}">
+      {% if task.status == 'done' %}<svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>{% endif %}
+    </button>
+  </form>
+
+  <div class="flex-1 min-w-0">
+    <div class="flex items-start justify-between gap-2 flex-wrap">
+      <a href="{{ url_for('tasks.task_detail', task_id=task.id) }}"
+         class="text-sm font-medium hover:text-brand-600 dark:hover:text-brand-400 truncate leading-5
+                {% if task.status == 'done' %}line-through text-gray-400{% else %}text-gray-900 dark:text-gray-100{% endif %}">
+        {{ task.title }}
+      </a>
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        {{ priority_badge(task.priority) }}
+        {{ status_badge(task.status) }}
+      </div>
+    </div>
+    <div class="flex items-center gap-3 mt-1.5 flex-wrap text-xs text-gray-400">
+      {% if task.project %}
+        <span class="flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full" style="background:{{ task.project.color }}"></span>
+          {{ task.project.name }}
+        </span>
+      {% endif %}
+      {% if task.assignee %}
+        <span class="flex items-center gap-1">
+          <span class="w-4 h-4 rounded-full bg-brand-100 dark:bg-brand-900 text-brand-600 dark:text-brand-400 flex items-center justify-center font-semibold" style="font-size:9px;">
+            {{ task.assignee.username[0].upper() }}
+          </span>
+          {{ task.assignee.username }}
+        </span>
+      {% endif %}
+      {% for tag in task.tags %}
+        <span class="flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full" style="background:{{ tag.color }}"></span>{{ tag.name }}
+        </span>
+      {% endfor %}
+      {% if task.deadline %}
+        <span class="flex items-center gap-1 {% if is_overdue %}text-red-500 font-medium{% endif %}">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          {{ task.deadline.strftime('%d.%m.%Y %H:%M') }}{% if is_overdue %} — просрочено{% endif %}
+        </span>
+      {% endif %}
+      {% set prog = task.subtask_progress() %}
+      {% if prog %}
+        <span>{{ prog.done }}/{{ prog.total }} подзадач</span>
+      {% endif %}
+    </div>
+  </div>
+</div>

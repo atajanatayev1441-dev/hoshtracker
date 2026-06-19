@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Участники — {{ project.name }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl space-y-5">
+  <nav class="text-sm text-gray-400">
+    <a href="{{ url_for('projects.project_list') }}" class="hover:text-brand-600">Проекты</a>
+    <span class="mx-1.5">/</span>
+    <a href="{{ url_for('projects.detail', project_id=project.id) }}" class="hover:text-brand-600">{{ project.name }}</a>
+    <span class="mx-1.5">/</span>
+    <span>Участники</span>
+  </nav>
+
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <h1 class="section-title">Участники проекта</h1>
+    <div class="flex gap-2">
+      <a href="{{ url_for('projects.detail', project_id=project.id) }}" class="btn btn-secondary btn-sm">← Назад</a>
+    </div>
+  </div>
+
+  <!-- Current members -->
+  <div class="card card-shadow divide-y divide-gray-100 dark:divide-gray-800">
+    {% for m in members %}
+    <div class="flex items-center gap-3 px-4 py-3">
+      <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-600 dark:text-brand-400 font-semibold text-sm flex-shrink-0">
+        {{ m.user.username[0].upper() }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium">{{ m.user.username }}</p>
+        <p class="text-xs text-gray-400">{{ m.user.email }}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        {% if member_role == 'owner' and m.user_id != project.user_id %}
+        <!-- Role change -->
+        <form method="POST" action="{{ url_for('projects.change_member_role', project_id=project.id, user_id=m.user_id) }}" class="flex items-center gap-1">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <select name="role" onchange="this.form.submit()" class="text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400">
+            {% for r,l in [('viewer','Читатель'),('editor','Редактор'),('owner','Владелец')] %}
+              <option value="{{ r }}" {% if m.role == r %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        <!-- Remove -->
+        <form method="POST" action="{{ url_for('projects.remove_member', project_id=project.id, user_id=m.user_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors" title="Удалить">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"/></svg>
+          </button>
+        </form>
+        {% else %}
+        <span class="badge {% if m.role == 'owner' %}bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-400{% elif m.role == 'editor' %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300{% else %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400{% endif %}">
+          {% if m.role == 'owner' %}Владелец{% elif m.role == 'editor' %}Редактор{% else %}Читатель{% endif %}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Add member -->
+  {% if member_role == 'owner' and available_users %}
+  <div class="card card-shadow p-5">
+    <h2 class="font-semibold mb-4">Добавить участника</h2>
+    <form method="POST" action="{{ url_for('projects.add_member', project_id=project.id) }}" class="flex gap-3 flex-wrap">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <select name="user_id" class="form-input flex-1 min-w-36">
+        {% for u in available_users %}
+          <option value="{{ u.id }}">{{ u.username }} ({{ u.email }})</option>
+        {% endfor %}
+      </select>
+      <select name="role" class="form-input w-36">
+        <option value="viewer">Читатель</option>
+        <option value="editor">Редактор</option>
+        <option value="owner">Владелец</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Добавить</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Permission legend -->
+  <div class="card card-shadow p-5 bg-gray-50 dark:bg-gray-800/50">
+    <h3 class="font-medium text-sm mb-3 text-gray-600 dark:text-gray-400">Права доступа</h3>
+    <div class="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+      <div class="flex items-start gap-2">
+        <span class="badge bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-400 flex-shrink-0">Владелец</span>
+        <span>Полный доступ: управление участниками, редактирование и удаление проекта</span>
+      </div>
+      <div class="flex items-start gap-2">
+        <span class="badge bg-amber-100 text-amber-700 flex-shrink-0">Редактор</span>
+        <span>Создание и редактирование задач, добавление комментариев</span>
+      </div>
+      <div class="flex items-start gap-2">
+        <span class="badge bg-gray-100 text-gray-600 flex-shrink-0">Читатель</span>
+        <span>Просмотр задач и комментариев только для чтения</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

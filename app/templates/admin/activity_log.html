@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Лог активности — Администрирование{% endblock %}
+{% block content %}
+<div class="max-w-4xl space-y-4">
+  <nav class="text-sm text-gray-400">
+    <a href="{{ url_for('admin.index') }}" class="hover:text-brand-600">Администрирование</a>
+    <span class="mx-1.5">/</span>
+    <span>Лог активности</span>
+  </nav>
+  <h1 class="section-title">Лог активности</h1>
+
+  <div class="card card-shadow divide-y divide-gray-50 dark:divide-gray-800">
+    {% if logs %}
+      {% for log in logs %}
+      <div class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/30">
+        <div class="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 font-semibold text-xs flex-shrink-0 mt-0.5">
+          {{ log.actor.username[0].upper() }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm text-gray-800 dark:text-gray-200">
+            <span class="font-medium">{{ log.actor.username }}</span>
+            {{ log.description }}
+          </p>
+          <div class="flex items-center gap-3 mt-0.5">
+            <span class="text-xs text-gray-400">{{ log.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            <span class="badge bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 text-xs">{{ log.action }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="px-4 py-8 text-center text-sm text-gray-400">Нет записей активности</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

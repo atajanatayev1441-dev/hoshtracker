@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Вход — TaskTracker{% endblock %}
+{% block content %}
+<div class="w-full max-w-sm">
+  <div class="card card-shadow p-8">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-600 mb-4">
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">TaskTracker</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Войдите в свой аккаунт</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="space-y-4">
+        <div>
+          <label class="form-label">Имя пользователя</label>
+          {{ form.username(class='form-input', placeholder='Введите имя пользователя', autocomplete='username', autofocus=True) }}
+          {% for e in form.username.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+        </div>
+        <div>
+          <label class="form-label">Пароль</label>
+          <div class="relative">
+            {{ form.password(class='form-input pr-10', placeholder='Введите пароль', autocomplete='current-password', id='pwdInput') }}
+            <button type="button" onclick="togglePwd()" class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            </button>
+          </div>
+          {% for e in form.password.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+        </div>
+        <div class="flex items-center gap-2">
+          {{ form.remember_me(class='w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500') }}
+          <label for="{{ form.remember_me.id }}" class="text-sm text-gray-600 dark:text-gray-400 cursor-pointer">Запомнить меня</label>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-full justify-center mt-6 py-2.5">Войти</button>
+    </form>
+  </div>
+  <p class="text-center text-xs text-gray-400 mt-5">Обратитесь к администратору для получения доступа</p>
+</div>
+<script>
+function togglePwd() {
+  const i = document.getElementById('pwdInput');
+  i.type = i.type === 'password' ? 'text' : 'password';
+}
+</script>
+{% endblock %}

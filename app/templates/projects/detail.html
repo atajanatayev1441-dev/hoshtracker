@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — TaskTracker{% endblock %}
+{% block content %}
+<div class="max-w-4xl space-y-5">
+  <nav class="text-sm text-gray-400">
+    <a href="{{ url_for('projects.project_list') }}" class="hover:text-brand-600">Проекты</a>
+    <span class="mx-1.5">/</span>
+    <span class="text-gray-700 dark:text-gray-300">{{ project.name }}</span>
+  </nav>
+
+  <div class="flex items-start justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:{{ project.color }}20; border:2px solid {{ project.color }}40;">
+        <div class="w-3 h-3 rounded-full" style="background:{{ project.color }}"></div>
+      </div>
+      <div>
+        <h1 class="section-title">{{ project.name }}</h1>
+        {% if project.description %}<p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ project.description }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <a href="{{ url_for('projects.kanban', project_id=project.id) }}" class="btn btn-secondary btn-sm">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+        Канбан-доска
+      </a>
+      <a href="{{ url_for('tasks.new_task') }}?project={{ project.id }}" class="btn btn-primary btn-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Новая задача
+      </a>
+      <a href="{{ url_for('projects.members', project_id=project.id) }}" class="btn btn-secondary btn-sm">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Участники
+      </a>
+      <a href="{{ url_for('projects.edit', project_id=project.id) }}" class="btn btn-secondary btn-sm">Настройки</a>
+    </div>
+  </div>
+
+  <!-- Status filter -->
+  <div class="flex gap-2 flex-wrap text-sm">
+    <a href="{{ url_for('projects.detail', project_id=project.id) }}"
+       class="px-3 py-1.5 rounded-lg border font-medium transition-all {% if not status_filter %}bg-brand-600 text-white border-brand-600{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400{% endif %}">
+      Все
+    </a>
+    {% for v,l in [('todo','К выполнению'),('in_progress','В работе'),('review','На проверке'),('done','Выполнено')] %}
+    <a href="{{ url_for('projects.detail', project_id=project.id, status=v) }}"
+       class="px-3 py-1.5 rounded-lg border font-medium transition-all {% if status_filter==v %}bg-brand-600 text-white border-brand-600{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-brand-400{% endif %}">
+      {{ l }}
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if tasks %}
+    <div class="space-y-2">{% for task in tasks %}{% include 'tasks/_task_row.html' %}{% endfor %}</div>
+  {% else %}
+    <div class="card card-shadow p-10 text-center">
+      <svg class="w-10 h-10 mx-auto mb-3 text-gray-200 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      <p class="text-gray-500 dark:text-gray-400">Задач нет</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — Администрирование{% endblock %}
+{% block content %}
+<div class="max-w-lg space-y-5">
+  <nav class="text-sm text-gray-400">
+    <a href="{{ url_for('admin.index') }}" class="hover:text-brand-600">Администрирование</a>
+    <span class="mx-1.5">/</span>
+    <a href="{{ url_for('admin.user_list') }}" class="hover:text-brand-600">Пользователи</a>
+    <span class="mx-1.5">/</span>
+    <span>{{ title }}</span>
+  </nav>
+  <h1 class="section-title">{{ title }}</h1>
+
+  <div class="card card-shadow p-6">
+    <form method="POST"
+          action="{{ url_for('admin.edit_user', user_id=user.id) if user else url_for('admin.create_user') }}"
+          novalidate class="space-y-4">
+      {{ form.hidden_tag() }}
+
+      {% if not user %}
+      <div>
+        <label class="form-label">Имя пользователя</label>
+        {{ form.username(class='form-input', autocomplete='off') }}
+        {% for e in form.username.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+      </div>
+      {% else %}
+      <div class="px-3 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <p class="text-xs text-gray-400">Имя пользователя</p>
+        <p class="font-medium text-sm mt-0.5">{{ user.username }}</p>
+      </div>
+      {% endif %}
+
+      <div>
+        <label class="form-label">Email</label>
+        {{ form.email(class='form-input', autocomplete='off') }}
+        {% for e in form.email.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+      </div>
+
+      <div>
+        <label class="form-label">Роль</label>
+        {{ form.role(class='form-input') }}
+      </div>
+
+      {% if not user %}
+      <div>
+        <label class="form-label">Пароль</label>
+        {{ form.password(class='form-input', autocomplete='new-password') }}
+        <p class="mt-1 text-xs text-gray-400">Минимум 8 символов</p>
+        {% for e in form.password.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+      </div>
+      <div>
+        <label class="form-label">Подтвердите пароль</label>
+        {{ form.confirm_password(class='form-input', autocomplete='new-password') }}
+        {% for e in form.confirm_password.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+      </div>
+      {% else %}
+      <div class="flex items-center gap-3">
+        {{ form.is_active(class='h-4 w-4 rounded border-gray-300') }}
+        <label for="{{ form.is_active.id }}" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">Аккаунт активен</label>
+      </div>
+      <div>
+        <label class="form-label">Новый пароль <span class="text-gray-400 font-normal">(оставьте пустым, чтобы не менять)</span></label>
+        {{ form.new_password(class='form-input', autocomplete='new-password', placeholder='Не менять') }}
+        <p class="mt-1 text-xs text-gray-400">Если указан, пользователь должен будет сменить пароль.</p>
+        {% for e in form.new_password.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="btn btn-primary">{{ title }}</button>
+        <a href="{{ url_for('admin.user_list') }}" class="btn btn-secondary">Отмена</a>
+      </div>
+    </form>
+  </div>
+
+  {% if user and user.id != current_user.id %}
+  <div class="card card-shadow p-5 border border-red-100 dark:border-red-900">
+    <h3 class="font-semibold text-red-600 dark:text-red-400 mb-3">Опасная зона</h3>
+    <button onclick="document.getElementById('delModal').classList.remove('hidden')" class="btn btn-danger btn-sm">Удалить пользователя</button>
+  </div>
+
+  <div id="delModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="document.getElementById('delModal').classList.add('hidden')"></div>
+    <div class="card card-shadow p-6 max-w-sm w-full relative z-10">
+      <h3 class="font-semibold text-lg mb-2">Удалить пользователя?</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Пользователь <strong>{{ user.username }}</strong> и все его данные будут удалены.</p>
+      <div class="flex gap-3 justify-end">
+        <button onclick="document.getElementById('delModal').classList.add('hidden')" class="btn btn-secondary">Отмена</button>
+        <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-danger">Удалить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

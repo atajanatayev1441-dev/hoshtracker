@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Метки — TaskTracker{% endblock %}
+{% block content %}
+<div class="max-w-lg space-y-5">
+  <h1 class="section-title">Метки</h1>
+
+  <div class="card card-shadow p-5">
+    <h2 class="font-semibold mb-4">Создать метку</h2>
+    <form method="POST" action="{{ url_for('tasks.new_tag') }}" novalidate class="flex gap-3 items-end flex-wrap">
+      {{ form.hidden_tag() }}
+      <div class="flex-1 min-w-36">
+        <label class="form-label">Название</label>
+        {{ form.name(class='form-input', placeholder='Название метки...') }}
+        {% for e in form.name.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+      </div>
+      <div>
+        <label class="form-label">Цвет</label>
+        {{ form.color(class='h-9 w-12 rounded-lg border border-gray-300 cursor-pointer', type='color') }}
+      </div>
+      <button type="submit" class="btn btn-primary">Создать</button>
+    </form>
+  </div>
+
+  <div class="card card-shadow divide-y divide-gray-100 dark:divide-gray-800">
+    {% if tags %}
+      {% for tag in tags %}
+      <div class="flex items-center justify-between px-4 py-3">
+        <div class="flex items-center gap-3">
+          <span class="w-4 h-4 rounded-full flex-shrink-0" style="background:{{ tag.color }}"></span>
+          <span class="font-medium text-sm">{{ tag.name }}</span>
+          <span class="text-xs text-gray-400">{{ tag.tasks|length }} зад.</span>
+        </div>
+        <form method="POST" action="{{ url_for('tasks.delete_tag', tag_id=tag.id) }}"
+              onsubmit="return confirm('Удалить метку «{{ tag.name }}»?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="px-4 py-8 text-center text-sm text-gray-400">Меток нет. Создайте первую выше.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
