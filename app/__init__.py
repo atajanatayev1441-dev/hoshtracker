@@ -52,6 +52,9 @@ def create_app(config_name=None):
     app.register_blueprint(api_bp, url_prefix='/api/v1')
     csrf.exempt(api_bp)
 
+    from app.owner import owner as owner_bp
+    app.register_blueprint(owner_bp, url_prefix='/owner')
+
     from app import models  # noqa: F401
 
     from flask import redirect, url_for

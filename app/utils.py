@@ -1,9 +1,28 @@
 """Shared helpers: task visibility, permission checks, activity logging, notifications."""
 import re
+from functools import wraps
 from datetime import datetime
-from flask import url_for
+from flask import url_for, abort
 from flask_login import current_user
 from app import db
+
+
+def owner_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_owner():
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_or_owner_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin():
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated
 
 
 def visible_tasks_query(user_id):

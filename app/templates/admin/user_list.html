@@ -40,8 +40,11 @@
             <p class="text-xs text-gray-400">{{ user.email }}</p>
           </td>
           <td class="px-4 py-3">
-            <span class="badge {% if user.role=='admin' %}bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400{% else %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400{% endif %}">
-              {{ 'Администратор' if user.role=='admin' else 'Пользователь' }}
+            <span class="badge
+              {% if user.role=='owner' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400
+              {% elif user.role=='admin' %}bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400
+              {% else %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400{% endif %}">
+              {% if user.role=='owner' %}Владелец{% elif user.role=='admin' %}Администратор{% else %}Пользователь{% endif %}
             </span>
           </td>
           <td class="px-4 py-3">
@@ -53,11 +56,16 @@
           <td class="px-4 py-3 text-xs text-gray-400">{{ user.last_login.strftime('%d.%m.%Y') if user.last_login else '—' }}</td>
           <td class="px-4 py-3 text-xs text-gray-400">{{ user.created_at.strftime('%d.%m.%Y') }}</td>
           <td class="px-4 py-3">
+            {% set is_protected = user.is_owner() and not current_user.is_owner() %}
             <div class="flex items-center gap-1 justify-end">
+              {% if not is_protected %}
               <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="p-1.5 text-gray-400 hover:text-brand-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Редактировать">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
               </a>
-              {% if user.id != current_user.id %}
+              {% else %}
+              <span class="px-2 py-1 text-xs text-amber-600 dark:text-amber-400 font-medium">защищён</span>
+              {% endif %}
+              {% if user.id != current_user.id and not is_protected %}
               <form method="POST" action="{{ url_for('admin.toggle_user_active', user_id=user.id) }}" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="p-1.5 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="{{ 'Отключить' if user.is_active else 'Активировать' }}">

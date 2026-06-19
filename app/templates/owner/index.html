@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Обзор команды — TaskTracker{% endblock %}
+{% block content %}
+
+{# ── Relative time helper ── #}
+{% macro rel_time(dt) %}
+  {% if dt %}
+    {% set diff = (now - dt).total_seconds() %}
+    {% if diff < 60 %}только что
+    {% elif diff < 3600 %}{{ (diff / 60) | int }} мин. назад
+    {% elif diff < 86400 %}{{ (diff / 3600) | int }} ч. назад
+    {% elif diff < 86400 * 7 %}{{ (diff / 86400) | int }} дн. назад
+    {% else %}{{ dt.strftime('%d.%m.%Y') }}{% endif %}
+  {% else %}никогда{% endif %}
+{% endmacro %}
+
+<div class="space-y-6 max-w-5xl">
+
+  {# ── Header ── #}
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="section-title">Обзор команды</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Мониторинг прогресса всех участников</p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{{ url_for('owner.task_list') }}" class="btn btn-secondary btn-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+        Все задачи
+      </a>
+      <button onclick="document.getElementById('assignModal').classList.remove('hidden')" class="btn btn-primary btn-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Поручить задание
+      </button>
+    </div>
+  </div>
+
+  {# ── Global stats ── #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="card card-shadow p-4">
+      <p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Участники</p>
+      <p class="text-3xl font-bold mt-1">{{ total_users }}</p>
+    </div>
+    <div class="card card-shadow p-4">
+      <p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Всего задач</p>
+      <p class="text-3xl font-bold mt-1">{{ total_tasks }}</p>
+    </div>
+    <div class="card card-shadow p-4">
+      <p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Выполнено сегодня</p>
+      <p class="text-3xl font-bold mt-1 text-green-600 dark:text-green-400">{{ done_today_all }}</p>
+    </div>
+    <div class="card card-shadow p-4">
+      <p class="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Просрочено</p>
+      <p class="text-3xl font-bold mt-1 {% if overdue_total > 0 %}text-red-600 dark:text-red-400{% endif %}">{{ overdue_total }}</p>
+    </div>
+  </div>
+
+  {# ── User cards ── #}
+  {% if user_stats %}
+  <div class="space-y-3">
+    <h2 class="font-semibold text-gray-800 dark:text-gray-200">Статус по участникам</h2>
+    <div class="card card-shadow overflow-hidden">
+      {# Desktop table #}
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
+              <th class="px-4 py-3">Участник</th>
+              <th class="px-4 py-3 text-center">Активных</th>
+              <th class="px-4 py-3 text-center">Сегодня</th>
+              <th class="px-4 py-3 text-center">Просрочено</th>
+              <th class="px-4 py-3">Прогресс недели</th>
+              <th class="px-4 py-3">Активность</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
+            {% for s in user_stats %}
+            {% set color_dot = {'green': 'bg-green-500', 'yellow': 'bg-amber-400', 'red': 'bg-red-500'} %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="relative flex-shrink-0">
+                    <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-600 dark:text-brand-400 font-semibold text-sm">
+                      {{ s.user.username[0].upper() }}
+                    </div>
+                    <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 {{ color_dot[s.color] }}"></span>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-900 dark:text-gray-100">{{ s.user.username }}</p>
+                    <span class="text-xs {% if s.user.role=='owner' %}text-amber-600 dark:text-amber-400{% elif s.user.role=='admin' %}text-brand-600 dark:text-brand-400{% else %}text-gray-400{% endif %}">
+                      {% if s.user.role=='owner' %}Владелец{% elif s.user.role=='admin' %}Администратор{% else %}Пользователь{% endif %}
+                    </span>
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span class="font-semibold {% if s.active > 5 %}text-amber-600{% endif %}">{{ s.active }}</span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span class="font-semibold {% if s.done_today > 0 %}text-green-600 dark:text-green-400{% else %}text-gray-400{% endif %}">{{ s.done_today }}</span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span class="font-semibold {% if s.overdue > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400{% endif %}">{{ s.overdue }}</span>
+              </td>
+              <td class="px-4 py-3 min-w-36">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all
+                      {% if s.week_pct >= 70 %}bg-green-500{% elif s.week_pct >= 30 %}bg-amber-400{% else %}bg-red-400{% endif %}"
+                         style="width:{{ s.week_pct }}%"></div>
+                  </div>
+                  <span class="text-xs text-gray-400 w-8 text-right">{{ s.week_pct }}%</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-0.5">{{ s.week_done }} выполнено на неделе</p>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-400">{{ rel_time(s.last_activity) }}</td>
+              <td class="px-4 py-3">
+                <a href="{{ url_for('owner.task_list') }}?user={{ s.user.id }}" class="text-xs text-brand-600 dark:text-brand-400 hover:underline whitespace-nowrap">Задачи →</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# Mobile cards #}
+      <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-800">
+        {% for s in user_stats %}
+        {% set color_classes = {'green': 'border-l-green-500', 'yellow': 'border-l-amber-400', 'red': 'border-l-red-500'} %}
+        <div class="p-4 border-l-4 {{ color_classes[s.color] }}">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-600 font-semibold text-sm">
+                {{ s.user.username[0].upper() }}
+              </div>
+              <div>
+                <p class="font-medium text-sm">{{ s.user.username }}</p>
+                <p class="text-xs text-gray-400">{{ rel_time(s.last_activity) }}</p>
+              </div>
+            </div>
+            <a href="{{ url_for('owner.task_list') }}?user={{ s.user.id }}" class="text-xs text-brand-600 dark:text-brand-400">Задачи →</a>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mt-3 text-center">
+            <div>
+              <p class="text-lg font-bold">{{ s.active }}</p>
+              <p class="text-xs text-gray-400">активных</p>
+            </div>
+            <div>
+              <p class="text-lg font-bold {% if s.done_today > 0 %}text-green-600{% endif %}">{{ s.done_today }}</p>
+              <p class="text-xs text-gray-400">сегодня</p>
+            </div>
+            <div>
+              <p class="text-lg font-bold {% if s.overdue > 0 %}text-red-600{% endif %}">{{ s.overdue }}</p>
+              <p class="text-xs text-gray-400">просрочено</p>
+            </div>
+          </div>
+          <div class="mt-3">
+            <div class="flex items-center gap-2">
+              <div class="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                <div class="h-full rounded-full {% if s.week_pct >= 70 %}bg-green-500{% elif s.week_pct >= 30 %}bg-amber-400{% else %}bg-red-400{% endif %}"
+                     style="width:{{ s.week_pct }}%"></div>
+              </div>
+              <span class="text-xs text-gray-400">{{ s.week_pct }}%</span>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Legend #}
+    <div class="flex items-center gap-4 text-xs text-gray-400">
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>В норме</span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>1–2 просрочено</span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>3+ просрочено</span>
+    </div>
+  </div>
+  {% else %}
+  <div class="card card-shadow p-12 text-center text-gray-400">
+    <p class="font-medium">Нет активных пользователей</p>
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── Assign task modal ── #}
+<div id="assignModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="document.getElementById('assignModal').classList.add('hidden')"></div>
+  <div class="card card-shadow w-full sm:max-w-lg relative z-10 rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-t-2xl">
+      <h2 class="font-semibold text-lg">Поручить задание</h2>
+      <button onclick="document.getElementById('assignModal').classList.add('hidden')" class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <form method="POST" action="{{ url_for('owner.assign_task') }}" class="p-6 space-y-4" novalidate>
+      {{ assign_form.hidden_tag() }}
+
+      <div>
+        <label class="form-label">Исполнитель <span class="text-red-500">*</span></label>
+        {{ assign_form.assigned_to_id(class='form-input') }}
+      </div>
+
+      <div>
+        <label class="form-label">Название <span class="text-red-500">*</span></label>
+        {{ assign_form.title(class='form-input', placeholder='Что нужно сделать?') }}
+        {% for e in assign_form.title.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+      </div>
+
+      <div>
+        <label class="form-label">Описание</label>
+        {{ assign_form.description(class='form-input resize-none', rows=3, placeholder='Подробности...') }}
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Приоритет</label>
+          {{ assign_form.priority(class='form-input') }}
+        </div>
+        <div>
+          <label class="form-label">Срок</label>
+          {{ assign_form.deadline(class='form-input') }}
+        </div>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="btn btn-primary flex-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          Поручить
+        </button>
+        <button type="button" onclick="document.getElementById('assignModal').classList.add('hidden')" class="btn btn-secondary">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

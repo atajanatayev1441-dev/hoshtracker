@@ -75,6 +75,9 @@ def edit_user(user_id):
     user = db.session.get(User, user_id)
     if user is None:
         abort(404)
+    if user.is_owner() and not current_user.is_owner():
+        flash('Нельзя редактировать аккаунт владельца.', 'danger')
+        return redirect(url_for('admin.user_list'))
     form = EditUserForm(obj=user)
     if form.validate_on_submit():
         existing = User.query.filter(User.email == form.email.data.strip().lower(),
@@ -106,6 +109,9 @@ def delete_user(user_id):
     if user.id == current_user.id:
         flash('Нельзя удалить свой аккаунт.', 'danger')
         return redirect(url_for('admin.user_list'))
+    if user.is_owner() and not current_user.is_owner():
+        flash('Нельзя удалить аккаунт владельца.', 'danger')
+        return redirect(url_for('admin.user_list'))
     username = user.username
     db.session.delete(user)
     db.session.commit()
@@ -122,6 +128,9 @@ def toggle_user_active(user_id):
         abort(404)
     if user.id == current_user.id:
         flash('Нельзя деактивировать свой аккаунт.', 'danger')
+        return redirect(url_for('admin.user_list'))
+    if user.is_owner() and not current_user.is_owner():
+        flash('Нельзя деактивировать аккаунт владельца.', 'danger')
         return redirect(url_for('admin.user_list'))
     user.is_active = not user.is_active
     db.session.commit()
@@ -159,6 +168,9 @@ def impersonate(user_id):
     user = db.session.get(User, user_id)
     if user is None:
         abort(404)
+    if user.is_owner() and not current_user.is_owner():
+        flash('Нельзя войти как владелец.', 'danger')
+        return redirect(url_for('admin.user_list'))
     session['impersonating_as'] = user_id
     session['original_admin_id'] = current_user.id
     login_user(user)

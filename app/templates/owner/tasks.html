@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block title %}Все задачи — Обзор команды{% endblock %}
+{% block content %}
+<div class="space-y-4 max-w-6xl">
+
+  {# ── Header ── #}
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <nav class="text-sm text-gray-400 mb-1">
+        <a href="{{ url_for('owner.index') }}" class="hover:text-brand-600">Обзор команды</a>
+        <span class="mx-1.5">/</span>
+        <span>Все задачи</span>
+      </nav>
+      <h1 class="section-title">Все задачи</h1>
+    </div>
+    <button onclick="document.getElementById('assignModal').classList.remove('hidden')" class="btn btn-primary btn-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Поручить задание
+    </button>
+  </div>
+
+  {# ── Filters ── #}
+  <form method="GET" action="{{ url_for('owner.task_list') }}" class="card card-shadow p-4">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <select name="user" class="form-input">
+        <option value="">Все участники</option>
+        {% for u in all_users %}
+          <option value="{{ u.id }}" {% if user_filter == u.id|string %}selected{% endif %}>{{ u.username }}</option>
+        {% endfor %}
+      </select>
+      <select name="status" class="form-input">
+        <option value="">Все статусы</option>
+        {% for v,l in [('todo','К выполнению'),('in_progress','В работе'),('review','На проверке'),('done','Выполнено'),('cancelled','Отменено')] %}
+          <option value="{{ v }}" {% if status_filter==v %}selected{% endif %}>{{ l }}</option>
+        {% endfor %}
+      </select>
+      <select name="priority" class="form-input">
+        <option value="">Все приоритеты</option>
+        {% for v,l in [('low','Низкий'),('medium','Средний'),('high','Высокий'),('critical','Критический')] %}
+          <option value="{{ v }}" {% if priority_filter==v %}selected{% endif %}>{{ l }}</option>
+        {% endfor %}
+      </select>
+      <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-brand-400 transition-colors {% if overdue_only %}border-red-400 bg-red-50 dark:bg-red-950/30{% endif %}">
+        <input type="checkbox" name="overdue" value="1" {% if overdue_only %}checked{% endif %} class="h-4 w-4 rounded border-gray-300" onchange="this.form.submit()">
+        <span class="text-sm font-medium {% if overdue_only %}text-red-600 dark:text-red-400{% else %}text-gray-600 dark:text-gray-400{% endif %}">Только просрочено</span>
+      </label>
+    </div>
+    <div class="flex gap-2 mt-2">
+      <button type="submit" class="btn btn-primary btn-sm">Применить</button>
+      <a href="{{ url_for('owner.task_list') }}" class="btn btn-secondary btn-sm">Сбросить</a>
+    </div>
+  </form>
+
+  <p class="text-sm text-gray-400">{{ tasks|length }} задач</p>
+
+  {# ── Task table (desktop) ── #}
+  {% if tasks %}
+  <div class="card card-shadow overflow-hidden">
+    <div class="hidden lg:block overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
+            <th class="px-4 py-3">Задача</th>
+            <th class="px-4 py-3">Автор</th>
+            <th class="px-4 py-3">Исполнитель</th>
+            <th class="px-4 py-3">Проект</th>
+            <th class="px-4 py-3">Приоритет</th>
+            <th class="px-4 py-3">Срок</th>
+            <th class="px-4 py-3">Статус</th>
+            <th class="px-4 py-3">Обновлено</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
+          {% for task in tasks %}
+          {% set is_overdue = task.deadline and task.status not in ['done','cancelled'] and task.deadline < now %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/30 {% if is_overdue %}bg-red-50/30 dark:bg-red-950/10{% endif %}">
+            <td class="px-4 py-3 max-w-xs">
+              <div class="flex items-start gap-2">
+                <a href="{{ url_for('tasks.task_detail', task_id=task.id) }}"
+                   class="font-medium text-gray-900 dark:text-gray-100 hover:text-brand-600 leading-5 line-clamp-2">
+                  {{ task.title }}
+                </a>
+                {% if task.is_owner_assigned %}
+                <span class="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">👑</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="px-4 py-3 text-gray-500">{{ task.owner.username }}</td>
+            <td class="px-4 py-3">
+              {% if task.assignee %}
+              <span class="flex items-center gap-1.5 text-sm">
+                <span class="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-600 font-semibold flex-shrink-0" style="font-size:9px;">{{ task.assignee.username[0].upper() }}</span>
+                {{ task.assignee.username }}
+              </span>
+              {% else %}
+              <span class="text-gray-400 text-xs">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if task.project %}
+              <span class="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+                <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{{ task.project.color }}"></span>
+                {{ task.project.name }}
+              </span>
+              {% else %}
+              <span class="text-gray-400 text-xs">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">{{ priority_badge(task.priority) }}</td>
+            <td class="px-4 py-3 text-xs {% if is_overdue %}text-red-600 dark:text-red-400 font-medium{% else %}text-gray-400{% endif %}">
+              {% if task.deadline %}{{ task.deadline.strftime('%d.%m %H:%M') }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3">{{ status_badge(task.status) }}</td>
+            <td class="px-4 py-3 text-xs text-gray-400">{{ task.updated_at.strftime('%d.%m.%Y') }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-1">
+                <a href="{{ url_for('tasks.task_detail', task_id=task.id) }}" class="p-1.5 text-gray-400 hover:text-brand-600 rounded hover:bg-gray-100 dark:hover:bg-gray-800" title="Открыть">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </a>
+                <button onclick="openEdit({{ task.id }}, '{{ task.status }}', {{ task.assigned_to_id or 'null' }})"
+                        class="p-1.5 text-gray-400 hover:text-brand-600 rounded hover:bg-gray-100 dark:hover:bg-gray-800" title="Изменить">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Mobile task cards #}
+    <div class="lg:hidden divide-y divide-gray-100 dark:divide-gray-800">
+      {% for task in tasks %}
+      {% set is_overdue = task.deadline and task.status not in ['done','cancelled'] and task.deadline < now %}
+      <div class="p-4 {% if is_overdue %}border-l-4 border-l-red-400{% endif %}">
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <a href="{{ url_for('tasks.task_detail', task_id=task.id) }}"
+             class="flex-1 min-w-0 font-medium text-sm text-gray-900 dark:text-gray-100 hover:text-brand-600 leading-5">
+            {{ task.title }}
+          </a>
+          {% if task.is_owner_assigned %}
+          <span class="flex-shrink-0 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">👑</span>
+          {% endif %}
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+          {{ priority_badge(task.priority) }}
+          {{ status_badge(task.status) }}
+        </div>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
+          <span>{{ task.owner.username }}</span>
+          {% if task.assignee %}<span>→ {{ task.assignee.username }}</span>{% endif %}
+          {% if task.project %}<span>{{ task.project.name }}</span>{% endif %}
+          {% if task.deadline %}<span class="{% if is_overdue %}text-red-500 font-medium{% endif %}">{{ task.deadline.strftime('%d.%m.%Y') }}</span>{% endif %}
+        </div>
+        <div class="mt-2">
+          <button onclick="openEdit({{ task.id }}, '{{ task.status }}', {{ task.assigned_to_id or 'null' }})"
+                  class="text-xs text-brand-600 dark:text-brand-400 hover:underline">Изменить →</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card card-shadow p-12 text-center">
+    <svg class="w-12 h-12 mx-auto mb-3 text-gray-200 dark:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    <p class="font-medium text-gray-500 dark:text-gray-400">Задачи не найдены</p>
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── Edit task modal ── #}
+<div id="editModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="document.getElementById('editModal').classList.add('hidden')"></div>
+  <div class="card card-shadow w-full sm:max-w-sm relative z-10 rounded-t-2xl sm:rounded-2xl">
+    <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800">
+      <h2 class="font-semibold">Обновить задачу</h2>
+      <button onclick="document.getElementById('editModal').classList.add('hidden')" class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="editForm" method="POST" class="p-6 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="form-label">Статус</label>
+        <select name="status" id="editStatus" class="form-input">
+          {% for v,l in [('todo','К выполнению'),('in_progress','В работе'),('review','На проверке'),('done','Выполнено'),('cancelled','Отменено')] %}
+            <option value="{{ v }}">{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Исполнитель</label>
+        <select name="assigned_to_id" id="editAssignee" class="form-input">
+          <option value="">— Не назначено —</option>
+          {% for u in all_users %}
+            <option value="{{ u.id }}">{{ u.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary flex-1">Сохранить</button>
+        <button type="button" onclick="document.getElementById('editModal').classList.add('hidden')" class="btn btn-secondary">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Assign task modal ── #}
+<div id="assignModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="document.getElementById('assignModal').classList.add('hidden')"></div>
+  <div class="card card-shadow w-full sm:max-w-lg relative z-10 rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 rounded-t-2xl">
+      <h2 class="font-semibold text-lg">Поручить задание</h2>
+      <button onclick="document.getElementById('assignModal').classList.add('hidden')" class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form method="POST" action="{{ url_for('owner.assign_task') }}" class="p-6 space-y-4" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div>
+        <label class="form-label">Исполнитель <span class="text-red-500">*</span></label>
+        <select name="assigned_to_id" class="form-input">
+          {% for u in all_users %}
+            <option value="{{ u.id }}">{{ u.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Название <span class="text-red-500">*</span></label>
+        <input type="text" name="title" class="form-input" placeholder="Что нужно сделать?" required>
+      </div>
+      <div>
+        <label class="form-label">Описание</label>
+        <textarea name="description" class="form-input resize-none" rows="3" placeholder="Подробности..."></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Приоритет</label>
+          <select name="priority" class="form-input">
+            <option value="low">Низкий</option>
+            <option value="medium" selected>Средний</option>
+            <option value="high">Высокий</option>
+            <option value="critical">Критический</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Срок</label>
+          <input type="datetime-local" name="deadline" class="form-input">
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="btn btn-primary flex-1">Поручить</button>
+        <button type="button" onclick="document.getElementById('assignModal').classList.add('hidden')" class="btn btn-secondary">Отмена</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEdit(taskId, status, assigneeId) {
+  document.getElementById('editForm').action = `/owner/tasks/${taskId}/update`;
+  document.getElementById('editStatus').value = status;
+  const sel = document.getElementById('editAssignee');
+  sel.value = assigneeId || '';
+  document.getElementById('editModal').classList.remove('hidden');
+}
+</script>
+{% endblock %}

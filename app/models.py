@@ -13,6 +13,11 @@ task_tags = db.Table(
 class User(UserMixin, db.Model):
     __tablename__ = 'user'
 
+    ROLE_OWNER = 'owner'
+    ROLE_ADMIN = 'admin'
+    ROLE_USER = 'user'
+    ROLES = [ROLE_OWNER, ROLE_ADMIN, ROLE_USER]
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
@@ -43,8 +48,11 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def is_owner(self):
+        return self.role == 'owner'
+
     def is_admin(self):
-        return self.role == 'admin'
+        return self.role in ('admin', 'owner')
 
     def task_count(self):
         return self.tasks.count()
@@ -146,6 +154,7 @@ class Task(db.Model):
     deadline = db.Column(db.DateTime, nullable=True)
     order = db.Column(db.Integer, default=0, nullable=False)
     time_estimate = db.Column(db.Integer, nullable=True)
+    is_owner_assigned = db.Column(db.Boolean, default=False, nullable=False, server_default='0')
     created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow())
     updated_at = db.Column(db.DateTime, default=lambda: datetime.utcnow(),
                            onupdate=lambda: datetime.utcnow())

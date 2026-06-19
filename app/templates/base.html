@@ -121,6 +121,15 @@
         Аналитика
       </a>
 
+      {% if current_user.is_owner() %}
+      <div class="pt-3 pb-1 px-2">
+        <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">Владелец</p>
+      </div>
+      <a href="{{ url_for('owner.index') }}" class="sidebar-link {% if request.blueprint=='owner' %}active{% endif %}">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Обзор команды
+      </a>
+      {% endif %}
       {% if current_user.is_admin() %}
       <div class="pt-3 pb-1 px-2">
         <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">Администрирование</p>
@@ -176,6 +185,11 @@
         <span class="font-bold text-sm">TaskTracker</span>
       </div>
       <div class="flex items-center gap-1">
+        {% if current_user.is_owner() %}
+        <a href="{{ url_for('owner.index') }}" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 {% if request.blueprint=='owner' %}text-brand-600{% else %}text-gray-500{% endif %}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </a>
+        {% endif %}
         <button onclick="toggleDark()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
         </button>

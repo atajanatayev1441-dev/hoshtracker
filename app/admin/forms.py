@@ -3,6 +3,8 @@ from wtforms import StringField, PasswordField, SelectField, BooleanField, Submi
 from wtforms.validators import DataRequired, Length, Email, Optional, EqualTo, ValidationError
 from app.models import User
 
+ROLE_CHOICES = [('user', 'Пользователь'), ('admin', 'Администратор')]
+
 
 class CreateUserForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(3, 64)])
@@ -11,8 +13,8 @@ class CreateUserForm(FlaskForm):
     confirm_password = PasswordField('Confirm Password', validators=[
         DataRequired(), EqualTo('password', message='Passwords must match.')
     ])
-    role = SelectField('Role', choices=[('user', 'User'), ('admin', 'Admin')], default='user')
-    submit = SubmitField('Create User')
+    role = SelectField('Роль', choices=ROLE_CHOICES, default='user')
+    submit = SubmitField('Создать пользователя')
 
     def validate_username(self, field):
         if User.query.filter_by(username=field.data.strip()).first():
@@ -25,8 +27,8 @@ class CreateUserForm(FlaskForm):
 
 class EditUserForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email(), Length(max=120)])
-    role = SelectField('Role', choices=[('user', 'User'), ('admin', 'Admin')])
-    is_active = BooleanField('Active')
-    new_password = PasswordField('New Password (leave blank to keep current)',
+    role = SelectField('Роль', choices=ROLE_CHOICES)
+    is_active = BooleanField('Активен')
+    new_password = PasswordField('Новый пароль (оставьте пустым, чтобы не менять)',
                                  validators=[Optional(), Length(min=8)])
-    submit = SubmitField('Save Changes')
+    submit = SubmitField('Сохранить')
